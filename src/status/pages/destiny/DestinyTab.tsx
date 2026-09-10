@@ -44,6 +44,7 @@ type PartnerListCategory = 'all' | 'present' | 'away' | 'contracted';
 type PartnerDetailSection =
   | 'overview'
   | 'status'
+  | 'experience'
   | 'equipment'
   | 'skills'
   | 'inventory'
@@ -491,6 +492,275 @@ const DestinyTabContent: FC<WithMvuDataProps> = ({ data }) => {
           }
         />
       </Card>
+    );
+  };
+
+  /**
+   * 性经验 - XP 档案：数组条目增删
+   * 数组整体写回，避免 _.unset 删除下标时留下空洞
+   */
+  const updateXpArchive = async (
+    partnerName: string,
+    nextArchive: Array<Record<string, any>>,
+  ): Promise<void> => {
+    const success = await updateField(`关系列表.${partnerName}.性经验.xp档案`, nextArchive);
+    if (success) {
+      toastr.success('已保存');
+    } else {
+      toastr.error('保存失败');
+    }
+  };
+
+  /** 渲染 XP 档案条目列表（只读展示 / 编辑模式可增删改） */
+  const renderPartnerXpArchive = (
+    partnerName: string,
+    archive: Array<Record<string, any>>,
+  ) => {
+    if (!archive.length && !editEnabled) {
+      return <EmptyHint className={styles.emptyHint} text="暂无 XP 档案" />;
+    }
+
+    return (
+      <div className={styles.xpArchiveList}>
+        {archive.map((entry, index) => {
+          const basePath = `关系列表.${partnerName}.性经验.xp档案.${index}`;
+
+          if (!editEnabled) {
+            return (
+              <div key={index} className={styles.xpArchiveItem}>
+                <div className={styles.xpArchiveHeader}>
+                  <span className={styles.xpArchiveType}>{entry.类型 || '未分类'}</span>
+                  {entry.稳定度 ? (
+                    <span className={styles.xpArchiveStability}>{entry.稳定度}</span>
+                  ) : null}
+                </div>
+                {entry.描述 ? <div className={styles.xpArchiveDesc}>{entry.描述}</div> : null}
+                {entry.发现时间 || entry.最后确认时间 ? (
+                  <div className={styles.xpArchiveMeta}>
+                    {entry.发现时间 ? <span>发现：{entry.发现时间}</span> : null}
+                    {entry.最后确认时间 ? <span>最近确认：{entry.最后确认时间}</span> : null}
+                  </div>
+                ) : null}
+              </div>
+            );
+          }
+
+          return (
+            <div key={index} className={styles.xpArchiveItem}>
+              <div className={styles.xpArchiveHeader}>
+                <div className={styles.xpArchiveEditField}>
+                  <EditableField path={`${basePath}.类型`} value={entry.类型 ?? ''} type="text" />
+                </div>
+                <button
+                  className={styles.xpArchiveDeleteBtn}
+                  type="button"
+                  title="删除该条档案"
+                  onClick={() =>
+                    updateXpArchive(
+                      partnerName,
+                      archive.filter((_, i) => i !== index),
+                    )
+                  }
+                >
+                  <i className="fa-solid fa-trash-can" />
+                </button>
+              </div>
+              <div className={styles.xpArchiveEditRow}>
+                <span className={styles.xpArchiveEditLabel}>描述</span>
+                <EditableField path={`${basePath}.描述`} value={entry.描述 ?? ''} type="textarea" />
+              </div>
+              <div className={styles.xpArchiveEditRow}>
+                <span className={styles.xpArchiveEditLabel}>稳定度</span>
+                <EditableField
+                  path={`${basePath}.稳定度`}
+                  value={entry.稳定度 ?? ''}
+                  type="text"
+                />
+              </div>
+              <div className={styles.xpArchiveEditRow}>
+                <span className={styles.xpArchiveEditLabel}>发现时间</span>
+                <EditableField
+                  path={`${basePath}.发现时间`}
+                  value={entry.发现时间 ?? ''}
+                  type="text"
+                />
+              </div>
+              <div className={styles.xpArchiveEditRow}>
+                <span className={styles.xpArchiveEditLabel}>最后确认</span>
+                <EditableField
+                  path={`${basePath}.最后确认时间`}
+                  value={entry.最后确认时间 ?? ''}
+                  type="text"
+                />
+              </div>
+            </div>
+          );
+        })}
+
+        {editEnabled && (
+          <button
+            className={styles.xpArchiveAddBtn}
+            type="button"
+            onClick={() =>
+              updateXpArchive(partnerName, [
+                ...archive,
+                { 类型: '', 描述: '', 发现时间: '', 最后确认时间: '', 稳定度: '模糊' },
+              ])
+            }
+          >
+            <i className="fa-solid fa-plus" />
+            添加档案
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  /** 渲染性经验分区（初吻 / 经历统计 / XP 档案） */
+  const renderPartnerExperienceSection = (partnerName: string, partner: PartnerRecord) => {
+    const experience = partner.性经验 ?? {};
+    const firstKiss = experience.初吻 ?? {};
+    const archive: Array<Record<string, any>> = Array.isArray(experience.xp档案)
+      ? experience.xp档案
+      : [];
+    const basePath = `关系列表.${partnerName}.性经验`;
+    const hasFirstKiss = Boolean(firstKiss.对象 || firstKiss.部位 || firstKiss.时间);
+    const hasCounter = [experience.口交, experience.性交, experience.手, experience.足, experience.总经历次数, experience.怀孕次数].some(
+      value => Number(value) > 0,
+    );
+    const hasAnyExperience =
+      hasFirstKiss ||
+      hasCounter ||
+      Boolean(experience.初夜对象 || experience.最活跃性伴侣) ||
+      archive.length > 0;
+
+    if (!editEnabled && !hasAnyExperience) {
+      return (
+        <div className={styles.partnerCards}>
+          <Card title="性经验">
+            <EmptyHint className={styles.emptyHint} text="暂无性经验记录" />
+          </Card>
+        </div>
+      );
+    }
+
+    return (
+      <div className={styles.partnerCards}>
+        {editEnabled || hasFirstKiss ? (
+          <Card title="初吻">
+            <div className={styles.partnerInfo}>
+              {renderEditableRow(
+                '对象',
+                `${basePath}.初吻.对象`,
+                firstKiss.对象,
+                'text',
+                styles.infoRow,
+                styles.infoLabel,
+                styles.infoValue,
+              )}
+              {renderEditableRow(
+                '部位',
+                `${basePath}.初吻.部位`,
+                firstKiss.部位,
+                'text',
+                styles.infoRow,
+                styles.infoLabel,
+                styles.infoValue,
+              )}
+              {renderEditableRow(
+                '时间',
+                `${basePath}.初吻.时间`,
+                firstKiss.时间,
+                'text',
+                styles.infoRow,
+                styles.infoLabel,
+                styles.infoValue,
+              )}
+            </div>
+          </Card>
+        ) : null}
+
+        <Card title="经历统计">
+          <div className={styles.partnerInfo}>
+            {renderEditableRow(
+              '口交',
+              `${basePath}.口交`,
+              experience.口交,
+              'number',
+              styles.infoRow,
+              styles.infoLabel,
+              styles.infoValue,
+            )}
+            {renderEditableRow(
+              '性交',
+              `${basePath}.性交`,
+              experience.性交,
+              'number',
+              styles.infoRow,
+              styles.infoLabel,
+              styles.infoValue,
+            )}
+            {renderEditableRow(
+              '手',
+              `${basePath}.手`,
+              experience.手,
+              'number',
+              styles.infoRow,
+              styles.infoLabel,
+              styles.infoValue,
+            )}
+            {renderEditableRow(
+              '足',
+              `${basePath}.足`,
+              experience.足,
+              'number',
+              styles.infoRow,
+              styles.infoLabel,
+              styles.infoValue,
+            )}
+            {renderEditableRow(
+              '总经历次数',
+              `${basePath}.总经历次数`,
+              experience.总经历次数,
+              'number',
+              styles.infoRow,
+              styles.infoLabel,
+              styles.infoValue,
+            )}
+            {renderEditableRow(
+              '怀孕次数',
+              `${basePath}.怀孕次数`,
+              experience.怀孕次数,
+              'number',
+              styles.infoRow,
+              styles.infoLabel,
+              styles.infoValue,
+            )}
+            {renderEditableRow(
+              '初夜对象',
+              `${basePath}.初夜对象`,
+              experience.初夜对象,
+              'text',
+              styles.infoRow,
+              styles.infoLabel,
+              styles.infoValue,
+            )}
+            {renderEditableRow(
+              '最活跃性伴侣',
+              `${basePath}.最活跃性伴侣`,
+              experience.最活跃性伴侣,
+              'text',
+              styles.infoRow,
+              styles.infoLabel,
+              styles.infoValue,
+            )}
+          </div>
+        </Card>
+
+        <Card title="XP 档案">
+          {renderPartnerXpArchive(partnerName, archive)}
+        </Card>
+      </div>
     );
   };
 
@@ -1249,6 +1519,7 @@ const DestinyTabContent: FC<WithMvuDataProps> = ({ data }) => {
     const detailSections: Array<{ key: PartnerDetailSection; label: string }> = [
       { key: 'overview', label: '概览' },
       { key: 'status', label: '状态' },
+      { key: 'experience', label: '性经验' },
       { key: 'equipment', label: '装备' },
       { key: 'skills', label: '技能' },
       { key: 'inventory', label: '背包' },
@@ -1486,6 +1757,9 @@ const DestinyTabContent: FC<WithMvuDataProps> = ({ data }) => {
             )}
           </div>
         )}
+
+        {activePartnerDetailSection === 'experience' &&
+          renderPartnerExperienceSection(partnerName, partner)}
 
         {activePartnerAssetSection &&
           renderPartnerAssetSection(partnerName, activePartnerAssetSection)}

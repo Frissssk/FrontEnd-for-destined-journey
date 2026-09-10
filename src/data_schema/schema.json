@@ -272,6 +272,92 @@
           "背景故事": {
             "default": "",
             "type": "string"
+          },
+          "性经验": {
+            "default": {},
+            "type": "object",
+            "properties": {
+              "初吻": {
+                "default": {},
+                "type": "object",
+                "properties": {
+                  "对象": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "部位": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "时间": {
+                    "default": "",
+                    "type": "string"
+                  }
+                }
+              },
+              "口交": {
+                "default": 0,
+                "type": "number"
+              },
+              "性交": {
+                "default": 0,
+                "type": "number"
+              },
+              "手": {
+                "default": 0,
+                "type": "number"
+              },
+              "足": {
+                "default": 0,
+                "type": "number"
+              },
+              "初夜对象": {
+                "default": "",
+                "type": "string"
+              },
+              "总经历次数": {
+                "default": 0,
+                "type": "number"
+              },
+              "最活跃性伴侣": {
+                "default": "",
+                "type": "string"
+              },
+              "怀孕次数": {
+                "default": 0,
+                "type": "number"
+              },
+              "xp档案": {
+                "default": [],
+                "type": "array",
+                "items": {
+                  "default": {},
+                  "type": "object",
+                  "properties": {
+                    "类型": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "描述": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "发现时间": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "最后确认时间": {
+                      "default": "",
+                      "type": "string"
+                    },
+                    "稳定度": {
+                      "default": "模糊",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

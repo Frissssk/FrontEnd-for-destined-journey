@@ -131,6 +131,39 @@ const partners = z
         资产: assets,
         心里话: z.string().prefault(''),
         背景故事: z.string().prefault(''),
+
+        性经验: z
+          .object({
+            初吻: z
+              .object({
+                对象: z.string().prefault(''),
+                部位: z.string().prefault(''),
+                时间: z.string().prefault(''),
+              })
+              .prefault({}),
+            口交: z.coerce.number().prefault(0),
+            性交: z.coerce.number().prefault(0),
+            手: z.coerce.number().prefault(0),
+            足: z.coerce.number().prefault(0),
+            初夜对象: z.string().prefault(''),
+            总经历次数: z.coerce.number().prefault(0),
+            最活跃性伴侣: z.string().prefault(''),
+            怀孕次数: z.coerce.number().prefault(0),
+            xp档案: z
+              .array(
+                z
+                  .object({
+                    类型: z.string().prefault(''),
+                    描述: z.string().prefault(''),
+                    发现时间: z.string().prefault(''),
+                    最后确认时间: z.string().prefault(''),
+                    稳定度: z.string().prefault('模糊'),
+                  })
+                  .prefault({}),
+              )
+              .prefault([]),
+          })
+          .prefault({}),
       })
       .prefault({})
       .transform(data =>
@@ -172,6 +205,7 @@ const partners = z
           // 故事信息
           '心里话',
           '背景故事',
+          '性经验',
         ]),
       ),
   )

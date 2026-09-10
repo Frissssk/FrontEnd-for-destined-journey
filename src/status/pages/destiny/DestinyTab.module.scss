@@ -1709,3 +1709,84 @@ $destiny-mobile-detail-height: clamp(600px, calc(56vh + 208px), 920px);
 .hiddenGroupBody {
   margin-top: 2px;
 }
+
+// 性经验 / XP 档案
+.xpArchiveList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.xpArchiveItem {
+  @include item-bar($spacing-sm);
+  border: 1px solid var(--theme-card-border);
+}
+
+.xpArchiveHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-sm;
+}
+
+.xpArchiveType {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--theme-text-primary);
+  min-width: 0;
+  word-break: break-word;
+}
+
+.xpArchiveStability {
+  @include badge-bordered;
+  flex-shrink: 0;
+}
+
+.xpArchiveDesc {
+  margin-top: $spacing-xs;
+  color: var(--theme-text-primary);
+  line-height: 1.5;
+  min-width: 0;
+  word-break: break-word;
+  white-space: pre-line;
+}
+
+.xpArchiveMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-xs $spacing-md;
+  margin-top: $spacing-xs;
+  color: var(--theme-text-muted);
+  font-size: 11px;
+}
+
+.xpArchiveEditField {
+  flex: 1;
+  min-width: 0;
+}
+
+.xpArchiveEditRow {
+  @include label-value-grid(minmax(72px, 0.28fr));
+  margin-top: $spacing-xs;
+}
+
+.xpArchiveEditLabel {
+  color: var(--theme-text-secondary);
+  font-size: 12px;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.xpArchiveDeleteBtn {
+  @include delete-button-base;
+}
+
+.xpArchiveAddBtn {
+  @include button-secondary;
+  align-self: flex-start;
+  gap: $spacing-xs;
+
+  i {
+    font-size: 10px;
+  }
+}
