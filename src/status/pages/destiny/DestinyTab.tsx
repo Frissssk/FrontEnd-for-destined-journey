@@ -495,15 +495,9 @@ const DestinyTabContent: FC<WithMvuDataProps> = ({ data }) => {
     );
   };
 
-  /**
-   * 性经验 - XP 档案：数组条目增删
-   * 数组整体写回，避免 _.unset 删除下标时留下空洞
-   */
-  const updateXpArchive = async (
-    partnerName: string,
-    nextArchive: Array<Record<string, any>>,
-  ): Promise<void> => {
-    const success = await updateField(`关系列表.${partnerName}.性经验.xp档案`, nextArchive);
+  /** 性经验档案：集合（对象 / 初次 / 各胎 / XP）整体写回 */
+  const updateExperienceNode = async (path: string, next: unknown): Promise<void> => {
+    const success = await updateField(path, next);
     if (success) {
       toastr.success('已保存');
     } else {
@@ -511,128 +505,134 @@ const DestinyTabContent: FC<WithMvuDataProps> = ({ data }) => {
     }
   };
 
-  /** 渲染 XP 档案条目列表（只读展示 / 编辑模式可增删改） */
-  const renderPartnerXpArchive = (
-    partnerName: string,
-    archive: Array<Record<string, any>>,
-  ) => {
-    if (!archive.length && !editEnabled) {
-      return <EmptyHint className={styles.emptyHint} text="暂无 XP 档案" />;
+  /** 性经验：一组固定字段的编辑 / 只读行 */
+  const renderExperienceFields = (
+    basePath: string,
+    source: Record<string, any>,
+    specs: Array<{
+      key: string;
+      label: string;
+      type: FieldType;
+      numberConfig?: { min?: number; max?: number; step?: number };
+    }>,
+  ) => (
+    <div className={styles.partnerInfo}>
+      {specs.map(spec =>
+        renderEditableRow(
+          spec.label,
+          `${basePath}.${spec.key}`,
+          source[spec.key],
+          spec.type,
+          styles.infoRow,
+          styles.infoLabel,
+          styles.infoValue,
+          spec.numberConfig ? { numberConfig: spec.numberConfig } : undefined,
+        ),
+      )}
+    </div>
+  );
+
+  /** 性经验：集合条目（字典 / 数组）—— 可编辑字段、可删除、可新增 */
+  const renderExperienceCollection = (config: {
+    entries: Array<{ name: string; value: Record<string, any>; path: string }>;
+    specs: Array<{ key: string; label: string; type: FieldType }>;
+    emptyText: string;
+    addLabel: string;
+    onAdd: () => void;
+    onDelete: (entry: { name: string; value: Record<string, any>; path: string }) => void;
+  }) => {
+    if (!config.entries.length && !editEnabled) {
+      return <EmptyHint className={styles.emptyHint} text={config.emptyText} />;
     }
 
     return (
       <div className={styles.xpArchiveList}>
-        {archive.map((entry, index) => {
-          const basePath = `关系列表.${partnerName}.性经验.xp档案.${index}`;
-
-          if (!editEnabled) {
-            return (
-              <div key={index} className={styles.xpArchiveItem}>
-                <div className={styles.xpArchiveHeader}>
-                  <span className={styles.xpArchiveType}>{entry.类型 || '未分类'}</span>
-                  {entry.稳定度 ? (
-                    <span className={styles.xpArchiveStability}>{entry.稳定度}</span>
-                  ) : null}
-                </div>
-                {entry.描述 ? <div className={styles.xpArchiveDesc}>{entry.描述}</div> : null}
-                {entry.发现时间 || entry.最后确认时间 ? (
-                  <div className={styles.xpArchiveMeta}>
-                    {entry.发现时间 ? <span>发现：{entry.发现时间}</span> : null}
-                    {entry.最后确认时间 ? <span>最近确认：{entry.最后确认时间}</span> : null}
-                  </div>
-                ) : null}
-              </div>
-            );
-          }
-
-          return (
-            <div key={index} className={styles.xpArchiveItem}>
-              <div className={styles.xpArchiveHeader}>
-                <div className={styles.xpArchiveEditField}>
-                  <EditableField path={`${basePath}.类型`} value={entry.类型 ?? ''} type="text" />
-                </div>
+        {config.entries.map(entry => (
+          <div key={entry.path} className={styles.xpArchiveItem}>
+            <div className={styles.xpArchiveHeader}>
+              <span className={styles.xpArchiveType}>{entry.name || '未命名'}</span>
+              {editEnabled ? (
                 <button
                   className={styles.xpArchiveDeleteBtn}
                   type="button"
-                  title="删除该条档案"
-                  onClick={() =>
-                    updateXpArchive(
-                      partnerName,
-                      archive.filter((_, i) => i !== index),
-                    )
-                  }
+                  title="删除该条"
+                  onClick={() => config.onDelete(entry)}
                 >
                   <i className="fa-solid fa-trash-can" />
                 </button>
-              </div>
-              <div className={styles.xpArchiveEditRow}>
-                <span className={styles.xpArchiveEditLabel}>描述</span>
-                <EditableField path={`${basePath}.描述`} value={entry.描述 ?? ''} type="textarea" />
-              </div>
-              <div className={styles.xpArchiveEditRow}>
-                <span className={styles.xpArchiveEditLabel}>稳定度</span>
-                <EditableField
-                  path={`${basePath}.稳定度`}
-                  value={entry.稳定度 ?? ''}
-                  type="text"
-                />
-              </div>
-              <div className={styles.xpArchiveEditRow}>
-                <span className={styles.xpArchiveEditLabel}>发现时间</span>
-                <EditableField
-                  path={`${basePath}.发现时间`}
-                  value={entry.发现时间 ?? ''}
-                  type="text"
-                />
-              </div>
-              <div className={styles.xpArchiveEditRow}>
-                <span className={styles.xpArchiveEditLabel}>最后确认</span>
-                <EditableField
-                  path={`${basePath}.最后确认时间`}
-                  value={entry.最后确认时间 ?? ''}
-                  type="text"
-                />
-              </div>
+              ) : null}
             </div>
-          );
-        })}
+            <div className={styles.partnerInfo}>
+              {config.specs.map(spec =>
+                renderEditableRow(
+                  spec.label,
+                  `${entry.path}.${spec.key}`,
+                  entry.value?.[spec.key],
+                  spec.type,
+                  styles.infoRow,
+                  styles.infoLabel,
+                  styles.infoValue,
+                ),
+              )}
+            </div>
+          </div>
+        ))}
 
-        {editEnabled && (
-          <button
-            className={styles.xpArchiveAddBtn}
-            type="button"
-            onClick={() =>
-              updateXpArchive(partnerName, [
-                ...archive,
-                { 类型: '', 描述: '', 发现时间: '', 最后确认时间: '', 稳定度: '模糊' },
-              ])
-            }
-          >
+        {editEnabled ? (
+          <button className={styles.xpArchiveAddBtn} type="button" onClick={config.onAdd}>
             <i className="fa-solid fa-plus" />
-            添加档案
+            {config.addLabel}
           </button>
-        )}
+        ) : null}
       </div>
     );
   };
 
-  /** 渲染性经验分区（初吻 / 经历统计 / XP 档案） */
+  /** 渲染性经验分区（统计 / 初体验 / 对象 / 孕产 / 身体 / XP 档案） */
   const renderPartnerExperienceSection = (partnerName: string, partner: PartnerRecord) => {
-    const experience = partner.性经验 ?? {};
-    const firstKiss = experience.初吻 ?? {};
-    const archive: Array<Record<string, any>> = Array.isArray(experience.xp档案)
-      ? experience.xp档案
-      : [];
     const basePath = `关系列表.${partnerName}.性经验`;
-    const hasFirstKiss = Boolean(firstKiss.对象 || firstKiss.部位 || firstKiss.时间);
-    const hasCounter = [experience.口交, experience.性交, experience.手, experience.足, experience.总经历次数, experience.怀孕次数].some(
-      value => Number(value) > 0,
-    );
+    const experience = partner.性经验 ?? {};
+    const stats: Record<string, any> = experience.统计 ?? {};
+    const first: Record<string, any> = experience.初体验 ?? {};
+    const firstKiss: Record<string, any> = first.初吻 ?? {};
+    const initialMap: Record<string, any> = first.初次 ?? {};
+    const partnerMap: Record<string, any> = experience.对象 ?? {};
+    const pregnancy: Record<string, any> = experience.孕产 ?? {};
+    const fetusList: Array<Record<string, any>> = Array.isArray(pregnancy.各胎) ? pregnancy.各胎 : [];
+    const body: Record<string, any> = experience.身体 ?? {};
+    const xpList: Array<Record<string, any>> = Array.isArray(experience.xp档案) ? experience.xp档案 : [];
+
+    const initialEntries = Object.entries(initialMap).map(([name, value]) => ({
+      name,
+      value: (value ?? {}) as Record<string, any>,
+      path: `${basePath}.初体验.初次.${name}`,
+    }));
+    const partnerEntries = Object.entries(partnerMap).map(([name, value]) => ({
+      name,
+      value: (value ?? {}) as Record<string, any>,
+      path: `${basePath}.对象.${name}`,
+    }));
+    const fetusEntries = fetusList.map((value, index) => ({
+      name: `第 ${index + 1} 胎`,
+      value: (value ?? {}) as Record<string, any>,
+      path: `${basePath}.孕产.各胎.${index}`,
+    }));
+    const xpEntries = xpList.map((value, index) => ({
+      name: value?.类型 || `XP ${index + 1}`,
+      value: (value ?? {}) as Record<string, any>,
+      path: `${basePath}.xp档案.${index}`,
+    }));
+
     const hasAnyExperience =
-      hasFirstKiss ||
-      hasCounter ||
-      Boolean(experience.初夜对象 || experience.最活跃性伴侣) ||
-      archive.length > 0;
+      Object.values(stats).some(value => Number(value) > 0) ||
+      Boolean(firstKiss.对象 || first.初夜对象 || first.初夜场景) ||
+      initialEntries.length > 0 ||
+      partnerEntries.length > 0 ||
+      Number(pregnancy.怀孕次数) > 0 ||
+      Boolean(pregnancy.当前怀孕 || pregnancy.最近孕父) ||
+      fetusEntries.length > 0 ||
+      Boolean(body.破处 || body.改造 || body.残留) ||
+      xpEntries.length > 0;
 
     if (!editEnabled && !hasAnyExperience) {
       return (
@@ -644,121 +644,175 @@ const DestinyTabContent: FC<WithMvuDataProps> = ({ data }) => {
       );
     }
 
+    const statSpecs: Array<{
+      key: string;
+      label: string;
+      type: FieldType;
+      numberConfig?: { min?: number; max?: number; step?: number };
+    }> = [
+      { key: '口交', label: '口交', type: 'number', numberConfig: { min: 0, step: 1 } },
+      { key: '性交', label: '性交', type: 'number', numberConfig: { min: 0, step: 1 } },
+      { key: '肛交', label: '肛交', type: 'number', numberConfig: { min: 0, step: 1 } },
+      { key: '手', label: '手', type: 'number', numberConfig: { min: 0, step: 1 } },
+      { key: '足', label: '足', type: 'number', numberConfig: { min: 0, step: 1 } },
+      { key: '群交', label: '群交', type: 'number', numberConfig: { min: 0, step: 1 } },
+      { key: '兽交', label: '兽交', type: 'number', numberConfig: { min: 0, step: 1 } },
+      { key: '中出次数', label: '中出次数', type: 'number', numberConfig: { min: 0, step: 1 } },
+      { key: '对象数', label: '对象数', type: 'number', numberConfig: { min: 0, step: 1 } },
+      { key: '总经历次数', label: '总经历次数', type: 'number', numberConfig: { min: 0, step: 1 } },
+    ];
+
     return (
       <div className={styles.partnerCards}>
-        {editEnabled || hasFirstKiss ? (
-          <Card title="初吻">
-            <div className={styles.partnerInfo}>
-              {renderEditableRow(
-                '对象',
-                `${basePath}.初吻.对象`,
-                firstKiss.对象,
-                'text',
-                styles.infoRow,
-                styles.infoLabel,
-                styles.infoValue,
-              )}
-              {renderEditableRow(
-                '部位',
-                `${basePath}.初吻.部位`,
-                firstKiss.部位,
-                'text',
-                styles.infoRow,
-                styles.infoLabel,
-                styles.infoValue,
-              )}
-              {renderEditableRow(
-                '时间',
-                `${basePath}.初吻.时间`,
-                firstKiss.时间,
-                'text',
-                styles.infoRow,
-                styles.infoLabel,
-                styles.infoValue,
-              )}
-            </div>
-          </Card>
-        ) : null}
+        <Card title="统计">
+          {renderExperienceFields(`${basePath}.统计`, stats, statSpecs)}
+        </Card>
 
-        <Card title="经历统计">
+        <Card title="初体验">
+          {renderExperienceFields(`${basePath}.初体验.初吻`, firstKiss, [
+            { key: '对象', label: '初吻·对象', type: 'text' },
+            { key: '部位', label: '初吻·部位', type: 'text' },
+            { key: '时间', label: '初吻·时间', type: 'text' },
+          ])}
           <div className={styles.partnerInfo}>
             {renderEditableRow(
-              '口交',
-              `${basePath}.口交`,
-              experience.口交,
-              'number',
-              styles.infoRow,
-              styles.infoLabel,
-              styles.infoValue,
-            )}
-            {renderEditableRow(
-              '性交',
-              `${basePath}.性交`,
-              experience.性交,
-              'number',
-              styles.infoRow,
-              styles.infoLabel,
-              styles.infoValue,
-            )}
-            {renderEditableRow(
-              '手',
-              `${basePath}.手`,
-              experience.手,
-              'number',
-              styles.infoRow,
-              styles.infoLabel,
-              styles.infoValue,
-            )}
-            {renderEditableRow(
-              '足',
-              `${basePath}.足`,
-              experience.足,
-              'number',
-              styles.infoRow,
-              styles.infoLabel,
-              styles.infoValue,
-            )}
-            {renderEditableRow(
-              '总经历次数',
-              `${basePath}.总经历次数`,
-              experience.总经历次数,
-              'number',
-              styles.infoRow,
-              styles.infoLabel,
-              styles.infoValue,
-            )}
-            {renderEditableRow(
-              '怀孕次数',
-              `${basePath}.怀孕次数`,
-              experience.怀孕次数,
-              'number',
-              styles.infoRow,
-              styles.infoLabel,
-              styles.infoValue,
-            )}
-            {renderEditableRow(
               '初夜对象',
-              `${basePath}.初夜对象`,
-              experience.初夜对象,
+              `${basePath}.初体验.初夜对象`,
+              first.初夜对象,
               'text',
               styles.infoRow,
               styles.infoLabel,
               styles.infoValue,
             )}
             {renderEditableRow(
-              '最活跃性伴侣',
-              `${basePath}.最活跃性伴侣`,
-              experience.最活跃性伴侣,
-              'text',
+              '初夜场景',
+              `${basePath}.初体验.初夜场景`,
+              first.初夜场景,
+              'textarea',
               styles.infoRow,
               styles.infoLabel,
               styles.infoValue,
             )}
           </div>
+          {renderExperienceCollection({
+            entries: initialEntries,
+            specs: [
+              { key: '对象', label: '对象', type: 'text' },
+              { key: '时间', label: '时间', type: 'text' },
+              { key: '场景', label: '场景', type: 'textarea' },
+            ],
+            emptyText: '暂无其他初次记录',
+            addLabel: '添加初次',
+            onAdd: () =>
+              updateExperienceNode(`${basePath}.初体验.初次`, {
+                ...initialMap,
+                [`初次${Object.keys(initialMap).length + 1}`]: { 对象: '', 时间: '', 场景: '' },
+              }),
+            onDelete: entry => {
+              const next = { ...initialMap };
+              delete next[entry.name];
+              updateExperienceNode(`${basePath}.初体验.初次`, next);
+            },
+          })}
+        </Card>
+
+        <Card title="对象">
+          {renderExperienceCollection({
+            entries: partnerEntries,
+            specs: [
+              { key: '种族', label: '种族', type: 'text' },
+              { key: '体型', label: '体型', type: 'text' },
+              { key: '次数', label: '次数', type: 'number' },
+              { key: '首次时间', label: '首次时间', type: 'text' },
+              { key: '最近时间', label: '最近时间', type: 'text' },
+              { key: '已发生', label: '已发生', type: 'tags' },
+              { key: '关系', label: '关系', type: 'text' },
+              { key: '称呼', label: '称呼', type: 'text' },
+              { key: '态度', label: '态度', type: 'text' },
+              { key: '相性', label: '相性', type: 'text' },
+              { key: '场景', label: '场景', type: 'textarea' },
+            ],
+            emptyText: '暂无对象记录',
+            addLabel: '添加对象',
+            onAdd: () =>
+              updateExperienceNode(`${basePath}.对象`, {
+                ...partnerMap,
+                [`新对象${Object.keys(partnerMap).length + 1}`]: { 相性: '中' },
+              }),
+            onDelete: entry => {
+              const next = { ...partnerMap };
+              delete next[entry.name];
+              updateExperienceNode(`${basePath}.对象`, next);
+            },
+          })}
+        </Card>
+
+        <Card title="孕产">
+          {renderExperienceFields(`${basePath}.孕产`, pregnancy, [
+            { key: '怀孕次数', label: '怀孕次数', type: 'number' },
+            { key: '下崽次数', label: '下崽次数', type: 'number' },
+            { key: '当前怀孕', label: '当前怀孕', type: 'toggle' },
+            { key: '当前孕父', label: '当前孕父', type: 'text' },
+            { key: '当前孕期', label: '当前孕期', type: 'text' },
+            { key: '最近孕父', label: '最近孕父', type: 'text' },
+          ])}
+          {renderExperienceCollection({
+            entries: fetusEntries,
+            specs: [
+              { key: '父亲', label: '父亲', type: 'text' },
+              { key: '结果', label: '结果', type: 'text' },
+              { key: '时间', label: '时间', type: 'text' },
+            ],
+            emptyText: '暂无孕产记录',
+            addLabel: '添加胎次',
+            onAdd: () =>
+              updateExperienceNode(`${basePath}.孕产.各胎`, [...fetusList, { 结果: '在孕' }]),
+            onDelete: entry => {
+              const index = Number(entry.path.split('.').pop());
+              updateExperienceNode(
+                `${basePath}.孕产.各胎`,
+                fetusList.filter((_, i) => i !== index),
+              );
+            },
+          })}
+        </Card>
+
+        <Card title="身体">
+          {renderExperienceFields(`${basePath}.身体`, body, [
+            { key: '破处', label: '破处', type: 'toggle' },
+            { key: '已开垦', label: '已开垦', type: 'tags' },
+            { key: '敏感', label: '敏感', type: 'tags' },
+            { key: '改造', label: '改造', type: 'text' },
+            { key: '残留', label: '残留', type: 'textarea' },
+          ])}
         </Card>
 
         <Card title="XP 档案">
-          {renderPartnerXpArchive(partnerName, archive)}
+          {renderExperienceCollection({
+            entries: xpEntries,
+            specs: [
+              { key: '类型', label: '类型', type: 'text' },
+              { key: '触发特质', label: '触发特质', type: 'text' },
+              { key: '描述', label: '描述', type: 'textarea' },
+              { key: '强度', label: '强度', type: 'text' },
+              { key: '发现时间', label: '发现时间', type: 'text' },
+              { key: '最后确认时间', label: '最后确认', type: 'text' },
+            ],
+            emptyText: '暂无 XP 档案',
+            addLabel: '添加 XP',
+            onAdd: () =>
+              updateExperienceNode(`${basePath}.xp档案`, [
+                ...xpList,
+                { 类型: '', 触发特质: '', 描述: '', 强度: '种子', 发现时间: '', 最后确认时间: '' },
+              ]),
+            onDelete: entry => {
+              const index = Number(entry.path.split('.').pop());
+              updateExperienceNode(
+                `${basePath}.xp档案`,
+                xpList.filter((_, i) => i !== index),
+              );
+            },
+          })}
         </Card>
       </div>
     );

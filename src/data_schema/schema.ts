@@ -139,30 +139,105 @@ const partnerListSchema = z
 
         性经验: z
           .object({
-            初吻: z
+            统计: z
               .object({
-                对象: z.string().prefault(''),
-                部位: z.string().prefault(''),
-                时间: z.string().prefault(''),
+                口交: z.coerce.number().prefault(0),
+                性交: z.coerce.number().prefault(0),
+                肛交: z.coerce.number().prefault(0),
+                手: z.coerce.number().prefault(0),
+                足: z.coerce.number().prefault(0),
+                群交: z.coerce.number().prefault(0),
+                兽交: z.coerce.number().prefault(0),
+                中出次数: z.coerce.number().prefault(0),
+                对象数: z.coerce.number().prefault(0),
+                总经历次数: z.coerce.number().prefault(0),
               })
               .prefault({}),
-            口交: z.coerce.number().prefault(0),
-            性交: z.coerce.number().prefault(0),
-            手: z.coerce.number().prefault(0),
-            足: z.coerce.number().prefault(0),
-            初夜对象: z.string().prefault(''),
-            总经历次数: z.coerce.number().prefault(0),
-            最活跃性伴侣: z.string().prefault(''),
-            怀孕次数: z.coerce.number().prefault(0),
+            初体验: z
+              .object({
+                初吻: z
+                  .object({
+                    对象: z.string().prefault(''),
+                    部位: z.string().prefault(''),
+                    时间: z.string().prefault(''),
+                  })
+                  .prefault({}),
+                初夜对象: z.string().prefault(''),
+                初夜场景: z.string().prefault(''),
+                初次: z
+                  .record(
+                    z.string(),
+                    z
+                      .object({
+                        对象: z.string().prefault(''),
+                        时间: z.string().prefault(''),
+                        场景: z.string().prefault(''),
+                      })
+                      .prefault({}),
+                  )
+                  .prefault({}),
+              })
+              .prefault({}),
+            对象: z
+              .record(
+                z.string(),
+                z
+                  .object({
+                    种族: z.string().prefault(''),
+                    体型: z.string().prefault(''),
+                    次数: z.coerce.number().prefault(0),
+                    首次时间: z.string().prefault(''),
+                    最近时间: z.string().prefault(''),
+                    已发生: z.array(z.string()).prefault([]),
+                    关系: z.string().prefault(''),
+                    称呼: z.string().prefault(''),
+                    态度: z.string().prefault(''),
+                    相性: z.string().prefault(''),
+                    场景: z.string().prefault(''),
+                  })
+                  .prefault({}),
+              )
+              .prefault({}),
+            孕产: z
+              .object({
+                怀孕次数: z.coerce.number().prefault(0),
+                下崽次数: z.coerce.number().prefault(0),
+                当前怀孕: z.boolean().prefault(false),
+                当前孕父: z.string().prefault(''),
+                当前孕期: z.string().prefault(''),
+                各胎: z
+                  .array(
+                    z
+                      .object({
+                        父亲: z.string().prefault(''),
+                        结果: z.string().prefault(''),
+                        时间: z.string().prefault(''),
+                      })
+                      .prefault({}),
+                  )
+                  .prefault([]),
+                最近孕父: z.string().prefault(''),
+              })
+              .prefault({}),
+            身体: z
+              .object({
+                破处: z.boolean().prefault(false),
+                已开垦: z.array(z.string()).prefault([]),
+                敏感: z.array(z.string()).prefault([]),
+                改造: z.string().prefault(''),
+                残留: z.string().prefault(''),
+              })
+              .prefault({}),
             xp档案: z
               .array(
                 z
                   .object({
                     类型: z.string().prefault(''),
+                    触发特质: z.string().prefault(''),
                     描述: z.string().prefault(''),
+                    强度: z.string().prefault('种子'),
                     发现时间: z.string().prefault(''),
                     最后确认时间: z.string().prefault(''),
-                    稳定度: z.string().prefault('模糊'),
                   })
                   .prefault({}),
               )
