@@ -43,6 +43,70 @@ export const ResourceSchema = z
     当前: _.clamp(data.当前, 0, Math.max(0, data.上限._基础 + data.上限.额外)),
   }));
 
+/** 旧版"分开的数字"资源字段 → 新版嵌套结构的对应关系 */
+const LegacyResourcePairs: ReadonlyArray<readonly [string, string]> = [
+  ['生命值', '生命值上限'],
+  ['法力值', '法力值上限'],
+  ['体力值', '体力值上限'],
+];
+
+/** 把值解析为有限数字，失败返回 null */
+const toFiniteNumberOrNull = (value: unknown): number | null => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
+/**
+ * 旧存档兼容迁移：把旧版数字式资源字段转换为新版嵌套结构
+ *   旧：生命值: 85, 生命值上限: 100
+ *   新：生命值: { 当前: 85, 上限: { _基础: 100, 额外: 0 } }
+ * 已经是新结构的对象 / 缺失该字段时原样返回。
+ * 注意：上限._基础 会由脚本按属性重算，这里只保证"当前值"不丢。
+ */
+export const migrateLegacyResources = (data: unknown): unknown => {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return data;
+
+  const source = data as Record<string, unknown>;
+  const hasLegacyField = LegacyResourcePairs.some(
+    ([current_key]) => toFiniteNumberOrNull(source[current_key]) !== null
+  );
+  if (!hasLegacyField) return data;
+
+  const next: Record<string, unknown> = { ...source };
+  for (const [current_key, max_key] of LegacyResourcePairs) {
+    const current_value = toFiniteNumberOrNull(next[current_key]);
+    if (current_value === null) continue;
+
+    const max_value = toFiniteNumberOrNull(next[max_key]) ?? current_value;
+    next[current_key] = { 当前: current_value, 上限: { _基础: max_value, 额外: 0 } };
+    delete next[max_key];
+  }
+
+  return next;
+};
+
+/** 对「关系列表」这类 { 名称: 伙伴对象 } 的映射逐个应用资源字段迁移 */
+export const migrateLegacyPartnerMap = (data: unknown): unknown => {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return data;
+
+  const map = data as Record<string, unknown>;
+  let next: Record<string, unknown> | null = null;
+
+  for (const [name, partner] of Object.entries(map)) {
+    const migrated = migrateLegacyResources(partner);
+    if (migrated !== partner) {
+      if (!next) next = { ...map };
+      next[name] = migrated;
+    }
+  }
+
+  return next ?? data;
+};
+
 /**
  * 截取 record 的前 n 个条目
  * @param {Record<string, T>} record - 待截取的 record

@@ -2,6 +2,8 @@ import {
   clampedMum,
   IdentitySchema,
   InventoryItemSchema,
+  migrateLegacyPartnerMap,
+  migrateLegacyResources,
   minLimitedNum,
   ResourceSchema,
   StatusEffectSchema,
@@ -47,7 +49,7 @@ const assets = z
 /**
  * 玩家信息
  */
-const player = z
+const playerSchema = z
   .object({
     ...IdentitySchema.shape,
     累计经验值: z.coerce.number().prefault(0),
@@ -102,10 +104,13 @@ const player = z
     ]);
   });
 
+/** 兼容旧存档：主角资源字段若是旧版数字格式，自动迁移为嵌套结构 */
+const player = z.preprocess(migrateLegacyResources, playerSchema);
+
 /**
  * 关系列表信息
  */
-const partners = z
+const partnerListSchema = z
   .record(
     z.string(),
     z
@@ -210,6 +215,9 @@ const partners = z
       ),
   )
   .prefault({});
+
+/** 兼容旧存档：伙伴资源字段若是旧版数字格式，自动迁移为嵌套结构 */
+const partners = z.preprocess(migrateLegacyPartnerMap, partnerListSchema);
 
 /**
  * 新闻信息
