@@ -623,27 +623,6 @@ const DestinyTabContent: FC<WithMvuDataProps> = ({ data }) => {
       path: `${basePath}.xp档案.${index}`,
     }));
 
-    const hasAnyExperience =
-      Object.values(stats).some(value => Number(value) > 0) ||
-      Boolean(firstKiss.对象 || first.初夜对象 || first.初夜场景) ||
-      initialEntries.length > 0 ||
-      partnerEntries.length > 0 ||
-      Number(pregnancy.怀孕次数) > 0 ||
-      Boolean(pregnancy.当前怀孕 || pregnancy.最近孕父) ||
-      fetusEntries.length > 0 ||
-      Boolean(body.破处 || body.改造 || body.残留) ||
-      xpEntries.length > 0;
-
-    if (!editEnabled && !hasAnyExperience) {
-      return (
-        <div className={styles.partnerCards}>
-          <Card title="性经验">
-            <EmptyHint className={styles.emptyHint} text="暂无性经验记录" />
-          </Card>
-        </div>
-      );
-    }
-
     const statSpecs: Array<{
       key: string;
       label: string;
